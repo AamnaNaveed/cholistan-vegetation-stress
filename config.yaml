@@ -1,0 +1,21 @@
+# Project Configuration
+project:
+  name: "cholistan-vegetation-stress"
+  version: "1.0.0"
+
+study_area:
+  districts: ["Bahawalpur", "Bahawalnagar", "Rahim Yar Khan"]
+  country: "Pakistan"
+  boundary_file: "data/processed/boundaries/study_area.gpkg"
+
+time_period:
+  start_date: "2018-01-01"
+  end_date: "2024-12-31"
+  training_end: "2023-12-31"
+  holdout_year: 2024
+
+spatial_resolution:
+  target_resolution_m: 250
+
+modelling:
+  random_seed: 42

@@ -1,0 +1,15 @@
+# RStudio user files
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# Output files (we will add these manually later)
+outputs/
+
+# Large data files
+data/raw/
+
+# System files
+.DS_Store
+Thumbs.db
