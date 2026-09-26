@@ -1,0 +1,9 @@
+Variable,Type,Description,Source
+ndvi_anomaly,Response,Standardized seasonal NDVI anomaly (Z-score). Baseline calculated strictly on 2018-2023.,MODIS MOD13Q1
+elevation,Predictor,SRTM elevation in meters.,SRTM DEM
+slope_degrees,Predictor,Slope derived from DEM in degrees.,Derived from DEM
+seasonal_precip,Predictor,Total seasonal precipitation (mm) from NASA POWER (Dynamic).,NASA POWER API
+lagged_seasonal_precip,Predictor,Precipitation from the previous season (mm) to account for soil moisture memory (Dynamic).,NASA POWER API
+seasonal_temp,Predictor,Mean seasonal temperature (Celsius) from NASA POWER (Dynamic).,NASA POWER API
+land_cover_class,Predictor,"Genuine MODIS MCD12Q1.061 (2021) IGBP land cover class (Bare_Sparse, Grass_Shrub, Cropland, Other).",MODIS MCD12Q1.061
+spatial_block,Grouping,K-means spatial block ID (1-4) for cross-validation.,Calculated
