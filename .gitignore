@@ -4,11 +4,13 @@
 .RData
 .Ruserdata
 
-# Output files (we will add these manually later)
-outputs/
-
-# Large data files
+# Ignore large raw data
 data/raw/
+
+# Ignore heavy output subfolders (maps, predictions, tables)
+outputs/maps/
+outputs/predictions/
+outputs/tables/
 
 # System files
 .DS_Store
