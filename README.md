@@ -1,11 +1,11 @@
 # 🌱 Cholistan Vegetation Stress Analysis
 
-I developed a reproducible R workflow to model seasonal vegetation anomalies in the Cholistan Desert using MODIS NDVI, time-varying climate predictors, terrain, and land cover. I compared an interpretable statistical model (GAM) with Random Forest using spatial-block cross-validation and a held-out year. I quantified model disagreement and environmental novelty to distinguish reliable predictions from areas requiring further validation.
+This repository contains a reproducible geospatial machine learning pipeline for modeling seasonal vegetation anomalies in the Cholistan Desert, Pakistan. The workflow integrates MODIS NDVI time-series, dynamic climate predictors (NASA POWER), terrain data, and MODIS land cover to assess vegetation stress. 
 
-*This project was developed as a portfolio piece for the GEM Track 4: Geospatial Modeller application.*
+It compares Generalized Additive Models (GAM) and Random Forest using rigorous spatial-block cross-validation and temporal hold-out testing. Furthermore, it quantifies model disagreement and environmental novelty to distinguish reliable predictions from areas requiring further field validation.
 
 ## 📍 Study Area
-The analysis focuses on three districts in southern Punjab, Pakistan: **Bahawalpur, Bahawalnagar, and Rahim Yar Khan**. The study period covers **2018–2024**, with 2024 strictly held out for temporal validation.
+The analysis focuses on three districts in southern Punjab: **Bahawalpur, Bahawalnagar, and Rahim Yar Khan**. The study period covers **2018–2024**, with 2024 strictly held out for temporal validation.
 
 ## 🛰️ Data Sources
 *   **Vegetation Response:** MODIS MOD13Q1 (250m, 16-day NDVI). Processed into seasonal Z-score anomalies.

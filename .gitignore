@@ -1,17 +1,16 @@
-# RStudio user files
-.Rproj.user/
+# Ignore RStudio user-specific files
+.Rproj.user
 .Rhistory
 .RData
 .Ruserdata
 
-# Ignore large raw data
+# Ignore raw data and large processed files to save space
 data/raw/
+data/processed/*.csv
+!data/processed/data_dictionary.csv
+!data/processed/novelty_summary_2024.csv
 
-# Ignore heavy output subfolders (maps, predictions, tables)
-outputs/maps/
-outputs/predictions/
-outputs/tables/
-
-# System files
-.DS_Store
-Thumbs.db
+# Ignore large output files, but KEEP the small summary tables
+outputs/figures/*.png
+outputs/rasters/
+!outputs/tables/

@@ -1,7 +1,7 @@
 # ============================================================================
-# Script: 07_validation_corrected.R
+# Script: 10_validation_corrected.R
 # Purpose: Rigorous spatial and temporal validation for GAM and RF.
-# Reference: PDF Step 7 (Section 1.8.7)
+#          Saves all metrics to CSV files for the reviewer.
 # ============================================================================
 
 # 1. Load required packages
@@ -15,7 +15,7 @@ lapply(required_packages, function(pkg) {
 config <- read_yaml(here("config.yaml"))
 modelling_data <- read_csv(here("data/processed/modelling_data_clean.csv"), show_col_types = FALSE)
 
-cat(" Starting Rigorous Validation (Step 7)...\n")
+cat("🚀 Starting Rigorous Validation (Step 10)...\n")
 
 # Define predictors and response
 predictors <- c("elevation", "slope_degrees", "seasonal_precip", "lagged_seasonal_precip", "seasonal_temp", "land_cover_class")
@@ -31,6 +31,9 @@ calc_metrics <- function(obs, pred) {
   r2 <- cor(obs, pred)^2
   return(c(RMSE = rmse, MAE = mae, R2 = r2))
 }
+
+# Create output directory for tables
+dir.create(here("outputs/tables"), showWarnings = FALSE)
 
 # --- PART 1: Spatial Block Cross-Validation (4 Folds) ---
 cat("\n🗺️ Running 4-Fold Spatial Block Cross-Validation...\n")
@@ -61,10 +64,11 @@ for (i in 1:4) {
   pred_rf <- predict(rf_fold, data = test_data %>% select(all_of(predictors)))$predictions
   metrics_rf <- calc_metrics(test_data$ndvi_anomaly, pred_rf)
   
-  # Store results
+  # Store results with observation counts
   spatial_results[[i]] <- data.frame(
     Fold = i,
     Model = c("GAM", "RF"),
+    N_Observations = nrow(test_data),
     RMSE = c(metrics_gam["RMSE"], metrics_rf["RMSE"]),
     MAE = c(metrics_gam["MAE"], metrics_rf["MAE"]),
     R2 = c(metrics_gam["R2"], metrics_rf["R2"])
@@ -72,6 +76,11 @@ for (i in 1:4) {
 }
 
 spatial_df <- do.call(rbind, spatial_results)
+
+# ✅ SAVE SPATIAL METRICS TO CSV
+write_csv(spatial_df, here("outputs/tables/spatial_cv_metrics.csv"))
+cat("✅ Saved spatial metrics to: outputs/tables/spatial_cv_metrics.csv\n")
+
 cat("\n--- Spatial Cross-Validation Results ---\n")
 print(spatial_df %>% group_by(Model) %>% summarise(across(c(RMSE, MAE, R2), ~mean(.x))))
 
@@ -99,13 +108,31 @@ if (nrow(test_temp) > 0) {
   pred_rf_temp <- predict(rf_final, data = test_temp %>% select(all_of(predictors)))$predictions
   metrics_rf_temp <- calc_metrics(test_temp$ndvi_anomaly, pred_rf_temp)
   
+  # ✅ SAVE TEMPORAL METRICS TO CSV
+  temporal_df <- data.frame(
+    Model = c("GAM", "RF"),
+    Year = 2024,
+    N_Observations = nrow(test_temp),
+    RMSE = c(metrics_gam_temp["RMSE"], metrics_rf_temp["RMSE"]),
+    MAE = c(metrics_gam_temp["MAE"], metrics_rf_temp["MAE"]),
+    R2 = c(metrics_gam_temp["R2"], metrics_rf_temp["R2"])
+  )
+  write_csv(temporal_df, here("outputs/tables/temporal_holdout_2024_metrics.csv"))
+  cat("✅ Saved temporal metrics to: outputs/tables/temporal_holdout_2024_metrics.csv\n")
+  
   cat("\n--- 2024 Temporal Hold-out Results ---\n")
-  cat("GAM  - RMSE:", round(metrics_gam_temp["RMSE"], 3), "| MAE:", round(metrics_gam_temp["MAE"], 3), "| R²:", round(metrics_gam_temp["R2"], 3), "\n")
-  cat("RF   - RMSE:", round(metrics_rf_temp["RMSE"], 3), "| MAE:", round(metrics_rf_temp["MAE"], 3), "| R²:", round(metrics_rf_temp["R2"], 3), "\n")
+  print(temporal_df)
   
-  # Plot Observed vs Predicted for RF (usually performs better on complex data)
+  # ✅ SAVE COMBINED MODEL COMPARISON SUMMARY
+  model_comparison <- bind_rows(
+    spatial_df %>% mutate(Validation_Type = "Spatial_CV_Fold"),
+    temporal_df %>% mutate(Fold = NA, Validation_Type = "Temporal_2024")
+  )
+  write_csv(model_comparison, here("outputs/tables/model_comparison_summary.csv"))
+  cat("✅ Saved combined summary to: outputs/tables/model_comparison_summary.csv\n")
+  
+  # Plot Observed vs Predicted for RF
   plot_data <- test_temp %>% mutate(predicted_anomaly_rf = pred_rf_temp)
-  
   p_val <- ggplot(plot_data, aes(x = ndvi_anomaly, y = predicted_anomaly_rf)) +
     geom_point(alpha = 0.3, color = "#2c3e50") +
     geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed", linewidth = 1) +
@@ -113,13 +140,12 @@ if (nrow(test_temp) > 0) {
       title = "Temporal Validation: Observed vs. Predicted NDVI Anomaly (2024)",
       subtitle = paste("Random Forest | R² =", round(metrics_rf_temp["R2"], 2), "| RMSE =", round(metrics_rf_temp["RMSE"], 2)),
       x = "Observed NDVI Anomaly", y = "Predicted NDVI Anomaly"
-    ) +
-    theme_minimal() + theme(plot.title = element_text(face = "bold"))
+    ) + theme_minimal() + theme(plot.title = element_text(face = "bold"))
   
   ggsave(here("outputs/figures/14_temporal_validation_2024.png"), p_val, width = 8, height = 6, dpi = 300)
-  cat(" Saved temporal validation plot to: outputs/figures/14_temporal_validation_2024.png\n")
+  cat("📊 Saved temporal validation plot.\n")
   
-  # Save models for the next step (mapping)
+  # Save final models
   saveRDS(gam_final, here("data/processed/gam_final_2024.rds"))
   saveRDS(rf_final, here("data/processed/rf_final_2024.rds"))
   
@@ -127,4 +153,4 @@ if (nrow(test_temp) > 0) {
   cat("️ No 2024 data found. Skipping temporal plot.\n")
 }
 
-cat("\n🎉 Step 7 Complete! Rigorous validation finished.\n")
+cat("\n🎉 Step 10 Complete! Rigorous validation finished and metrics saved.\n")
