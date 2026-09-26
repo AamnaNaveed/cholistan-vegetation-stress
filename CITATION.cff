@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Cholistan Vegetation Stress Analysis: A Reproducible Geospatial Machine Learning Pipeline"
+version: 1.0.0
+date-released: 2024-09-27
+authors:
+  - family-names: Naveed
+    given-names: Aamna
+    orcid: "https://orcid.org/0009-0001-3371-1066"
+repository-code: "https://github.com/AamnaNaveed/cholistan-vegetation-stress"
+keywords:
+  - "remote sensing"
+  - "vegetation stress"
+  - "machine learning"
+  - "MODIS"
+  - "spatial validation"
+  - "R"
+abstract: "A reproducible R workflow modeling seasonal vegetation anomalies in the Cholistan Desert, Pakistan, using MODIS NDVI, dynamic climate predictors (NASA POWER), terrain, and land cover, with rigorous spatial-block and temporal hold-out validation."
