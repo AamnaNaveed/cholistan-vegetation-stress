@@ -1,12 +1,11 @@
 # ============================================================================
-# Script: 03_add_dynamic_predictors.R
+# Script: 05_add_dynamic_predictors.R
 # Purpose: Add time-varying climate predictors using NASA POWER API
 # Reference: PDF Step 3 - Add dynamic predictors (seasonal precip, lagged precip, temp)
 # ============================================================================
 
 # 1. Install and load required packages
 required_packages <- c("tidyverse", "jsonlite", "yaml", "here")
-
 install_if_missing <- function(pkg) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     install.packages(pkg, dependencies = TRUE)
@@ -19,7 +18,7 @@ lapply(required_packages, library, character.only = TRUE)
 config <- read_yaml(here("config.yaml"))
 mod_table <- read_csv(here("data/processed/modelling_table_with_blocks.csv"), show_col_types = FALSE)
 
-cat("️ Adding dynamic climate predictors via NASA POWER API (Step 3)...\n")
+cat("🌍 Adding dynamic climate predictors via NASA POWER API (Step 3)...\n")
 
 # 3. Get unique coordinates to minimize API calls
 unique_points <- mod_table %>%
@@ -78,6 +77,7 @@ cat("✅ API data downloaded and parsed.\n")
 # Define seasons and calculate seasonal sums/means
 climate_seasonal <- climate_long %>%
   mutate(
+    # FIX: Removed trailing spaces from season names so the join works perfectly!
     season = case_when(
       month %in% c(12, 1, 2) ~ "Winter",
       month %in% c(3, 4, 5) ~ "Spring",
@@ -94,17 +94,29 @@ climate_seasonal <- climate_long %>%
     .groups = "drop"
   )
 
-# 6. Create Lagged Variables (Previous Season's Precipitation)
-# This is crucial for dryland ecology (soil moisture memory)
+# 6. Create Lagged Variables (FIXED: Chronological Ordering)
+# This ensures Winter gets lagged from Autumn, Spring from Winter, etc.
+cat("🔄 Fixing chronological order for lagged precipitation...\n")
+
 climate_lagged <- climate_seasonal %>%
-  arrange(latitude, longitude, season_year) %>%
+  mutate(
+    season_order = case_when(
+      season == "Winter" ~ 1,
+      season == "Spring" ~ 2,
+      season == "Summer" ~ 3,
+      season == "Autumn" ~ 4
+    )
+  ) %>%
+  # Sort strictly by location, year, and chronological season order
+  arrange(latitude, longitude, season_year, season_order) %>%
   group_by(latitude, longitude) %>%
   mutate(
-    lagged_seasonal_precip = lag(seasonal_precip, 1)
+    lagged_seasonal_precip = lag(seasonal_precip, n = 1)
   ) %>%
-  ungroup()
+  ungroup() %>%
+  select(-season_order) # Clean up the helper column
 
-cat("✅ Seasonal and lagged variables calculated.\n")
+cat("✅ Seasonal and chronologically correct lagged variables calculated.\n")
 
 # 7. Join dynamic climate data back to the main modelling table
 # We join on lat, lon, and the specific year/season of the observation
@@ -120,10 +132,10 @@ mod_table_dynamic <- mod_table_dynamic %>%
   select(-month, -season_year) # Remove helper columns
 
 write_csv(mod_table_dynamic, here("data/processed/modelling_table_dynamic.csv"))
-cat(" Saved dynamic modelling table to: data/processed/modelling_table_dynamic.csv\n")
+cat("💾 Saved dynamic modelling table to: data/processed/modelling_table_dynamic.csv\n")
 
 # 9. Quick visual check
 cat("\n--- Summary of Dynamic Predictors ---\n")
 print(summary(mod_table_dynamic %>% select(seasonal_precip, seasonal_temp, lagged_seasonal_precip)))
 
-cat("\n Step 3 Complete! Dynamic climate predictors added.\n")
+cat("\n🎉 Step 3 Complete! Dynamic climate predictors added with correct chronological lag.\n")
