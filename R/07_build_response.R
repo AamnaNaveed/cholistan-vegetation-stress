@@ -3,6 +3,7 @@
 # Purpose: Calculate standardized seasonal NDVI anomaly (vegetation stress)
 # REVISION: Aggregate 16-day composites to a single seasonal mean per pixel 
 #           to eliminate pseudo-replication (Reviewer 2, Major Comment 5).
+#           Ensures output is ready to be joined with dynamic predictors in Script 08.
 # ============================================================================
 
 # 1. Install and load required packages
@@ -13,7 +14,7 @@ install_if_missing <- function(pkg) {
   }
 }
 lapply(required_packages, install_if_missing)
-lapply(required_packages, library, character.only = TRUE)
+lapply(required_packages, library, character.only = TRUE, quietly = TRUE)
 
 # 2. Load configuration and the FULL NDVI dataset
 config <- read_yaml(here("config.yaml"))
@@ -60,7 +61,7 @@ cat("✅ Aggregated to", nrow(ndvi_seasonal), "unique pixel-season observations.
 
 # 4. Calculate seasonal baseline using ONLY the training period (2018-2023)
 cat("⚠️ Calculating baseline using ONLY 2018-2023 to prevent temporal data leakage...\n")
-# Note: We filter by season_year < 2024 to ensure Dec 2023 (which belongs to Winter 2024) is excluded from the baseline
+# Filter by season_year < 2024 to ensure Dec 2023 (Winter 2024) is excluded from baseline
 baseline_data <- ndvi_seasonal %>% filter(season_year < 2024)
 
 seasonal_baseline <- baseline_data %>%
@@ -71,7 +72,7 @@ seasonal_baseline <- baseline_data %>%
     n_obs = n(),
     .groups = "drop"
   ) %>%
-  # Flag zero standard deviations and insufficient observations
+  # Flag zero standard deviations and insufficient observations (now N = years, not composites!)
   mutate(
     baseline_sd = if_else(is.na(baseline_sd) | baseline_sd == 0 | n_obs < 3, NA_real_, baseline_sd)
   )
@@ -94,7 +95,7 @@ ndvi_anomaly <- ndvi_seasonal %>%
     )
   )
 
-# 6. Save the corrected response dataset
+# 6. Save the corrected response dataset (Ready to be joined with climate data in Script 08)
 write_csv(ndvi_anomaly, here("data/processed/ndvi_anomaly_response.csv"))
 cat("💾 Saved corrected anomaly response to: data/processed/ndvi_anomaly_response.csv\n")
 
