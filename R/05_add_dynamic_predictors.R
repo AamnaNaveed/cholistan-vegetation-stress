@@ -2,17 +2,20 @@
 # Script: 05_add_dynamic_predictors.R
 # Purpose: Add time-varying climate predictors using NASA POWER API
 # Reference: PDF Step 3 - Add dynamic predictors (seasonal precip, lagged precip, temp)
+# REVISION: Fixed precipitation aggregation to convert mm/day to total mm per month 
+#           before summing, addressing Reviewer 2's methodological concern.
 # ============================================================================
 
 # 1. Install and load required packages
-required_packages <- c("tidyverse", "jsonlite", "yaml", "here")
+required_packages <- c("tidyverse", "jsonlite", "yaml", "here", "lubridate")
+
 install_if_missing <- function(pkg) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     install.packages(pkg, dependencies = TRUE)
   }
 }
 lapply(required_packages, install_if_missing)
-lapply(required_packages, library, character.only = TRUE)
+lapply(required_packages, library, character.only = TRUE, quietly = TRUE)
 
 # 2. Load configuration and data
 config <- read_yaml(here("config.yaml"))
@@ -74,10 +77,20 @@ climate_long <- bind_rows(climate_data)
 cat("✅ API data downloaded and parsed.\n")
 
 # 5. Aggregate to Seasonal Variables
-# Define seasons and calculate seasonal sums/means
+# FIX: Convert mm/day to total mm per month BEFORE summing for the season
+cat("🔄 Converting precipitation from mm/day to total monthly mm...\n")
+
+climate_long <- climate_long %>%
+  mutate(
+    # Create a date object to easily find the number of days in the month
+    date_obj = as.Date(paste0(year, "-", month, "-01")),
+    days_in_month = as.numeric(lubridate::days_in_month(date_obj)),
+    # Calculate actual total precipitation in mm for that month
+    total_monthly_precip_mm = monthly_precip_mm_day * days_in_month
+  )
+
 climate_seasonal <- climate_long %>%
   mutate(
-    # FIX: Removed trailing spaces from season names so the join works perfectly!
     season = case_when(
       month %in% c(12, 1, 2) ~ "Winter",
       month %in% c(3, 4, 5) ~ "Spring",
@@ -89,12 +102,13 @@ climate_seasonal <- climate_long %>%
   ) %>%
   group_by(latitude, longitude, season, season_year) %>%
   summarise(
-    seasonal_precip = sum(monthly_precip_mm_day, na.rm = TRUE), # Total precip for season
-    seasonal_temp = mean(monthly_temp_c, na.rm = TRUE),          # Avg temp for season
+    # FIX: Now correctly summing the total monthly mm, not the mm/day rates!
+    seasonal_precip = sum(total_monthly_precip_mm, na.rm = TRUE), 
+    seasonal_temp = mean(monthly_temp_c, na.rm = TRUE),
     .groups = "drop"
   )
 
-# 6. Create Lagged Variables (FIXED: Chronological Ordering)
+# 6. Create Lagged Variables (Chronological Ordering)
 # This ensures Winter gets lagged from Autumn, Spring from Winter, etc.
 cat("🔄 Fixing chronological order for lagged precipitation...\n")
 
@@ -138,4 +152,4 @@ cat("💾 Saved dynamic modelling table to: data/processed/modelling_table_dynam
 cat("\n--- Summary of Dynamic Predictors ---\n")
 print(summary(mod_table_dynamic %>% select(seasonal_precip, seasonal_temp, lagged_seasonal_precip)))
 
-cat("\n🎉 Step 3 Complete! Dynamic climate predictors added with correct chronological lag.\n")
+cat("\n🎉 Step 3 Complete! Dynamic climate predictors added with correct chronological lag and proper precipitation units.\n")
