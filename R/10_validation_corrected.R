@@ -1,8 +1,10 @@
 # ============================================================================
 # Script: 10_validation_corrected.R
-# Purpose: Rigorous spatial and temporal validation for GAM and RF.
-# REVISION: Full rewrite to address Reviewer 2: fixed 2024 leakage in spatial 
-#           CV, switched to unbiased permutation importance, and added benchmarks.
+# Purpose: Rigorous spatial and temporal validation for GAM and RF on the 
+#          FINAL, aggregated, cropland-free dataset (n=4182).
+# REVISION: Runs on the new 4,182 observation dataset (one per pixel-season).
+#           Includes 2024 leakage fix in spatial CV, permutation importance,
+#           and zero-anomaly / climatology benchmarks.
 # ============================================================================
 
 # 1. Load required packages
@@ -12,11 +14,12 @@ lapply(required_packages, function(pkg) {
   library(pkg, character.only = TRUE, quietly = TRUE)
 })
 
-# 2. Load the clean modelling data
+# 2. Load the FINAL clean modelling data (aggregated to pixel-season)
 config <- read_yaml(here("config.yaml"))
 modelling_data <- read_csv(here("data/processed/modelling_data_clean.csv"), show_col_types = FALSE)
 
-cat("🚀 Starting Rigorous Validation (Step 10)...\n")
+cat("🚀 Starting Rigorous Validation on FINAL aggregated dataset (Step 10)...\n")
+cat("Total observations:", nrow(modelling_data), "\n")
 
 # Define predictors and response
 predictors <- c("elevation", "slope_degrees", "seasonal_precip", "lagged_seasonal_precip", "seasonal_temp", "land_cover_class")
@@ -152,7 +155,7 @@ if (nrow(test_temp) > 0) {
   print(temporal_df)
   
   # Plot Observed vs Predicted for RF (FIXED: equal axes)
-  plot_data <- test_temp %>% mutate(predicted_anomaly_rf = pred_rf_temp)
+  plot_data <- test_temp %>% mutate(predicted_anomaly_rf = as.numeric(pred_rf_temp))
   p_val <- ggplot(plot_data, aes(x = ndvi_anomaly, y = predicted_anomaly_rf)) +
     geom_point(alpha = 0.3, color = "#2c3e50") +
     geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed", linewidth = 1) +
@@ -173,4 +176,4 @@ if (nrow(test_temp) > 0) {
   cat("⚠️ No 2024 data found. Skipping temporal plot.\n")
 }
 
-cat("\n🎉 Step 10 Complete! Rigorous validation finished, leakage fixed, and benchmarks saved.\n")
+cat("\n🎉 Step 10 Complete! Rigorous validation finished on the final aggregated dataset.\n")
