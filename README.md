@@ -1,67 +1,28 @@
-# 🌱 Cholistan Vegetation Stress Analysis
+# Cholistan Vegetation Stress Modelling
 
-This repository contains a reproducible geospatial machine learning pipeline for modeling seasonal vegetation anomalies in the Cholistan Desert, Pakistan. The workflow integrates MODIS NDVI time-series, dynamic climate predictors (NASA POWER), terrain data, and MODIS land cover to assess vegetation stress. 
+This repository contains the complete, reproducible R pipeline for the manuscript: 
+**"Modelling seasonal NDVI anomalies in the Cholistan region of Pakistan using random forests and generalized additive models with spatial and temporal validation"** by Aamna Naveed.
 
-It compares Generalized Additive Models (GAM) and Random Forest using rigorous spatial-block cross-validation and temporal hold-out testing. Furthermore, it quantifies model disagreement and environmental novelty to distinguish reliable predictions from areas requiring further field validation.
+This manuscript is archived as a preprint with a permanent DOI: [Insert your ResearchSquare DOI link here].
 
-## 📍 Study Area
-The analysis focuses on three districts in southern Punjab: **Bahawalpur, Bahawalnagar, and Rahim Yar Khan**. The study period covers **2018–2024**, with 2024 strictly held out for temporal validation.
+## Pipeline Overview
+This workflow models seasonal NDVI anomalies using MODIS NDVI, NASA POWER climate data, and SRTM terrain data. It strictly prevents temporal data leakage and pseudo-replication by aggregating 16-day composites to seasonal means and calculating anomaly baselines exclusively on the 2018–2023 training period.
 
-## 🛰️ Data Sources
-*   **Vegetation Response:** MODIS MOD13Q1 (250m, 16-day NDVI). Processed into seasonal Z-score anomalies.
-*   **Dynamic Climate:** NASA POWER API (Monthly seasonal precipitation, lagged precipitation, and mean temperature).
-*   **Terrain:** SRTM Digital Elevation Model (DEM) and derived slope.
-*   **Land Cover:** MODIS MCD12Q1 Version 6.1 (2021) IGBP classification (Bare/Sparse, Grass/Shrub, Cropland, Other).
+## Script Descriptions
+The analysis is divided into sequential R scripts. Run them in order:
 
-*(See `data/data_sources.md` for detailed acquisition and processing notes).*
+*   `01_generate_study_area_map_v2.R`: Generates the publication-quality study area map (Figure 1).
+*   `02_data_preprocessing.R`: Downloads MODIS and NASA POWER data, aggregates 16-day composites to seasonal means, filters out irrigated cropland, and calculates the leakage-free Z-score anomalies.
+*   `03_09_modelling_and_analysis.R`: [Update these names to match your actual scripts] Sets up the spatial blocks, fits the GAM and Random Forest models, and calculates variable importance.
+*   `10_validation_corrected.R`: Performs the rigorous 4-fold spatial cross-validation and the strict 2024 temporal hold-out, including the Seasonal Climatology benchmarks. Evaluates skill on Raw NDVI.
+*   `11_uncertainty_novelty.R`: Calculates the multivariate Dissimilarity Index (Area of Applicability) and model disagreement.
+*   `12_generate_figures_4_5.R`: Generates the final publication-quality figures for variable importance and GAM partial effects.
 
-## 🧠 Methodology & Scientific Corrections
+## Data Availability
+All data used are freely available:
+*   MODIS NDVI (MOD13Q1 v6.1) and Land Cover (MCD12Q1 v6.1): NASA LP DAAC
+*   Climate Data: NASA POWER API
+*   Terrain Data: SRTM via USGS
 
-### 1. Response Variable: Seasonal NDVI Anomaly
-The primary response is the standardized seasonal NDVI anomaly (Z-score). 
-*   **Leakage Prevention:** The seasonal baseline (mean and standard deviation) is calculated strictly using the **2018–2023 training period**, grouped by `latitude`, `longitude`, and `season`. 
-*   The 2024 hold-out data is joined to this training-derived baseline without altering it.
-*   *(Note: Raw NDVI residual analysis was tested as a supplementary diagnostic, but the anomaly-based approach is the primary scientific method to avoid circularity).*
-
-### 2. Predictor Design
-*   **Dynamic Climate:** Replaced static WorldClim averages with time-varying seasonal precipitation, lagged precipitation (to capture soil moisture memory), and seasonal temperature.
-*   **Terrain & Land Cover:** Added slope (degrees) and genuine MODIS MCD12Q1 land cover as independent categorical predictors.
-
-### 3. Validation Strategy
-*   **Spatial Blocking:** 4 K-means spatial blocks to reduce proximity between training and test observations.
-*   **Temporal Hold-out:** Models are trained exclusively on 2018–2023 and evaluated on 2024.
-*   **Metrics:** RMSE, MAE, and R-squared are calculated for every fold and summarized.
-
-### 4. Uncertainty & Novelty Analysis
-*   **Model Disagreement:** Absolute difference between GAM and Random Forest predictions to proxy uncertainty.
-*   **Environmental Novelty (MESS-style):** Flagging 2024 observations where climate predictors fall outside the 5th–95th percentile range of the training data.
-
-## 📈 Key Results
-
-### Variable Importance
-Random Forest identified **seasonal temperature**, **seasonal precipitation**, and **lagged precipitation** as the primary drivers of vegetation dynamics, validating the need for time-varying climate data.
-![Variable Importance](outputs/figures/13_rf_variable_importance.png)
-
-### Temporal Validation (2024 Hold-out)
-The model maintains predictive skill on unseen 2024 data, with Random Forest outperforming GAM in handling complex, non-linear desert ecological interactions.
-![Temporal Validation](outputs/figures/14_temporal_validation_2024.png)
-
-### Uncertainty vs. Environmental Novelty
-Models show significantly higher disagreement (uncertainty) when predicting vegetation responses under novel climate conditions (outside the 2018–2023 training distribution).
-![Novelty vs Uncertainty](outputs/figures/16_novelty_vs_uncertainty.png)
-
-## 📂 Repository Structure
-*   `R/`: Reproducible R scripts, numbered sequentially according to the workflow.
-*   `data/raw/`: Raw downloaded spatial data (ignored by Git).
-*   `data/processed/`: Cleaned CSVs, processed rasters, and the `data_dictionary.csv`.
-*   `outputs/figures/`: All generated plots, validation charts, and maps.
-*   `config.yaml`: Centralized configuration for paths and parameters.
-
-## 🔄 How to Rerun
-1. Ensure R (>= 4.3.0) is installed.
-2. Install required packages: `install.packages(c("tidyverse", "terra", "sf", "mgcv", "ranger", "MODISTools", "yaml", "here"))`
-3. Open `cholistan-vegetation-stress.Rproj` in RStudio.
-4. Run the scripts in `R/` sequentially from `03_` through `08_`.
-
-## 📜 License & Citation
-This project is licensed under the MIT License. See `LICENSE` and `CITATION.cff` for details.
+## License
+This code is released under the MIT License.

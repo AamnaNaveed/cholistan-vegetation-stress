@@ -1,23 +1,38 @@
 # Project Configuration
 project:
   name: "cholistan-vegetation-stress"
-  version: "1.0.0"
+  version: "2.0.0" # Updated to reflect the major methodological revision
+  study_area:
+    districts: ["Bahawalpur", "Bahawalnagar", "Rahim Yar Khan"]
+    country: "Pakistan"
+    boundary_file: "data/processed/boundaries/study_area.gpkg"
+  
+  time_period:
+    start_date: "2018-01-01"
+    end_date: "2024-12-31"
+    training_end: "2023-12-31"
+    holdout_year: 2024
 
-study_area:
-  districts: ["Bahawalpur", "Bahawalnagar", "Rahim Yar Khan"]
-  country: "Pakistan"
-  boundary_file: "data/processed/boundaries/study_area.gpkg"
+  spatial_resolution:
+    target_resolution_m: 250 # MODIS grid
 
-time_period:
-  start_date: "2018-01-01"
-  end_date: "2024-12-31"
-  training_end: "2023-12-31"
-  holdout_year: 2024
+# Data Processing Flags (Ensures exact reproducibility of the revised pipeline)
+data_processing:
+  aggregate_to_seasonal_mean: true
+  exclude_cropland: true
+  log_transform_precipitation: true
+  min_training_seasons: 5
+  min_baseline_sd_floor: 0.01
 
-spatial_resolution:
-  target_resolution_m: 250
-
+# Modelling Hyperparameters (Matches revised Section 2.4)
 modelling:
   random_seed: 42
-  
-  
+  rf_parameters:
+    num_trees: 500
+    mtry: 3
+    min_node_size: 5
+    importance: "permutation"
+  gam_parameters:
+    family: "gaussian"
+    basis_dimension_k: 10
+    method: "REML"

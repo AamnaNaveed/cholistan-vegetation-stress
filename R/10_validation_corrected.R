@@ -1,9 +1,8 @@
 # ============================================================================
-# Script: 10_validation_corrected.R
+# Script: 10_validation_corrected.R (FINAL WINNING VERSION)
 # Purpose: Rigorous spatial and temporal validation for GAM and RF.
-# REVISION: Evaluate models on RAW NDVI (anomaly + baseline_mean) instead of 
-#           just the anomaly. This captures the true predictive skill of the 
-#           models in arid ecosystems where baseline soil brightness dominates.
+# REVISION: Uses log-transformed precipitation, tuned RF (mtry=3, min.node.size=5),
+#           and evaluates on Raw NDVI to capture the true total vegetation signal.
 # ============================================================================
 
 # 1. Load required packages
@@ -22,13 +21,12 @@ cat("Total observations:", nrow(modelling_data), "\n")
 
 # Define predictors (USING LOG-TRANSFORMED PRECIP) and response
 predictors <- c("elevation", "slope_degrees", "log_seasonal_precip", "log_lagged_precip", "seasonal_temp", "land_cover_class")
-response <- "ndvi_anomaly" # We still train on the anomaly
+response <- "ndvi_anomaly"
 
 # Ensure land_cover_class is a factor
 modelling_data <- modelling_data %>% mutate(land_cover_class = as.factor(land_cover_class))
 
 # Helper function to calculate metrics on RAW NDVI
-# This reconstructs the total NDVI (baseline + anomaly) to calculate true R²
 calc_metrics_raw <- function(obs_anomaly, pred_anomaly, baseline_mean) {
   valid_idx <- !is.na(obs_anomaly) & !is.na(pred_anomaly) & !is.na(baseline_mean)
   obs_anomaly <- obs_anomaly[valid_idx]
@@ -71,7 +69,6 @@ for (i in 1:4) {
     data = train_data, method = "REML"
   )
   pred_gam <- predict(gam_fold, newdata = test_data)
-  # FIX: Calculate metrics on RAW NDVI
   metrics_gam <- calc_metrics_raw(test_data$ndvi_anomaly, pred_gam, test_data$baseline_mean)
   
   # 2. Fit Random Forest (TUNED: mtry=3, min.node.size=5)
@@ -132,11 +129,9 @@ if (nrow(test_temp) > 0) {
   # --- BENCHMARK MODELS ---
   cat("\n📊 Calculating Benchmark Models for 2024...\n")
   
-  # Benchmark 1: Zero-Anomaly (Predicts baseline_mean exactly)
   pred_zero_anom <- rep(0, nrow(test_temp))
   metrics_zero <- calc_metrics_raw(test_temp$ndvi_anomaly, pred_zero_anom, test_temp$baseline_mean)
   
-  # Benchmark 2: Seasonal Climatology (Predicts the historical mean anomaly)
   season_means <- train_temp %>% 
     group_by(season) %>% 
     summarise(season_mean_anom = mean(ndvi_anomaly, na.rm=TRUE), .groups = "drop")
